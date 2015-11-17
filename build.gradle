@@ -1,0 +1,43 @@
+apply plugin: 'eclipse'
+apply plugin: 'maven'     // 生成bin lib的distribution :  gradle distTar
+apply plugin: 'java'
+
+version = '1.0'
+group = 'com.epiphyllum'
+description = 'h2tool and flyway and jdbi for test'
+
+def home = System.getenv("HOME");
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    compile(
+            'org.flywaydb:flyway-core:3.1',         // db migration: flyway
+            'org.jdbi:jdbi:2.63.1',                 // jdbi
+            'com.h2database:h2:1.4.190'            // h2 database
+    )
+
+    testCompile(
+            'junit:junit:4.12',  // junit
+            'org.spockframework:spock-core:1.0-groovy-2.4',  // spock
+            'org.assertj:assertj-core:3.2.0', // assertj
+            'org.hamcrest:hamcrest-core:1.3', // only necessary if Hamcrest matchers are used
+    )
+
+    testRuntime(
+            'cglib:cglib-nodep:3.2.0',        // allows mocking of classes (in addition to interfaces)
+            'org.objenesis:objenesis:2.2',    // allows mocking of classes without default constructor (together with CGLIB)
+    )
+}
+
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: "file://$home/.m2/repository")
+        }
+    }
+}
