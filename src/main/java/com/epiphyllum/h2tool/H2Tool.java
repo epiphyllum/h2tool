@@ -17,7 +17,7 @@ public class H2Tool {
      * @param dbNameOrJdbcUrl  : 如果给的是数据库名称， 那么默认用h2 memdb
      * @param migrationDir
      */
-    private void H2Tool(String dbNameOrJdbcUrl, String migrationDir) {
+    public H2Tool(String dbNameOrJdbcUrl, String migrationDir) {
 
         String url;
         String[] parts = dbNameOrJdbcUrl.split(":");
