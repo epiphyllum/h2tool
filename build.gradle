@@ -6,6 +6,11 @@ version = '1.0'
 group = 'com.epiphyllum'
 description = 'h2tool and flyway and jdbi for test'
 
+
+allprojects {
+    [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+}
+
 def home = System.getenv("HOME");
 
 repositories {

@@ -2,9 +2,11 @@ package com.epiphyllum.h2tool;
 
 import org.flywaydb.core.Flyway;
 import org.h2.jdbcx.JdbcDataSource;
+import org.h2.tools.Backup;
 import org.skife.jdbi.v2.DBI;
 
 import javax.sql.DataSource;
+import java.sql.SQLException;
 
 /**
  * Created by hary on 15/11/17.
@@ -87,4 +89,15 @@ public class H2Tool {
         flyway.setLocations(classpathMigrationDir);
         flyway.migrate();
     }
+
+    /**
+     *
+     * @param zipFilename  生成的备份文件的名称
+     * @param toWhere 备份保存位置
+     * @throws SQLException
+     */
+    public void backup(String zipFilename, String toWhere) throws SQLException {
+        Backup.main("-file", zipFilename, "-dir", toWhere);
+    }
 }
+
