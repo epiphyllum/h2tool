@@ -2,11 +2,16 @@ package com.epiphyllum.h2tool;
 
 import org.flywaydb.core.Flyway;
 import org.h2.jdbcx.JdbcDataSource;
-import org.h2.tools.Backup;
 import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.StatementContext;
+import org.skife.jdbi.v2.Update;
+import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
 import javax.sql.DataSource;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Iterator;
 
 /**
  * Created by hary on 15/11/17.
@@ -16,7 +21,7 @@ public class H2Tool {
     private Flyway flyway;
 
     /**
-     * @param dbNameOrJdbcUrl  : 如果给的是数据库名称， 那么默认用h2 memdb
+     * @param dbNameOrJdbcUrl : 如果给的是数据库名称， 那么默认用h2 memdb
      * @param migrationDir
      */
     public H2Tool(String dbNameOrJdbcUrl, String migrationDir) {
@@ -37,6 +42,63 @@ public class H2Tool {
     }
 
     /**
+     * 从文件恢复数据库
+     * @param zipPath 备份好的数据库文件
+     */
+    public H2Tool(String zipPath) {
+        String url = "jdbc:h2:mem:epiphyllum;DB_CLOSE_DELAY=-1";
+        JdbcDataSource dataSource = createDataSource(url);
+        dbi = new DBI(dataSource);
+        Handle handle = dbi.open();
+        Update update = handle.createStatement(String.format("RUNSCRIPT FROM '%s' COMPRESSION GZIP", zipPath));
+        update.execute();
+    }
+
+
+    public void testRestore() {
+
+        class Contact {
+            public String firstName;
+            public String lastName;
+            public String phone;
+
+            @Override
+            public String toString() {
+                return "Contact{" +
+                        "firstName='" + firstName + '\'' +
+                        ", lastName='" + lastName + '\'' +
+                        ", phone='" + phone + '\'' +
+                        '}';
+            }
+
+            public Contact(String firstName, String lastName, String phone) {
+                this.firstName = firstName;
+                this.lastName = lastName;
+                this.phone = phone;
+            }
+        }
+
+        Handle handle = dbi.open();
+
+        Iterator<Contact> it = handle.createQuery("select * from contact").map(new ResultSetMapper<Contact>() {
+            @Override
+            public Contact map(int index, ResultSet r, StatementContext ctx) throws SQLException {
+                return new Contact(
+                        r.getString("firstName"),
+                        r.getString("lastName"),
+                        r.getString("phone")
+                        );
+            }
+
+        }).iterator();
+
+        while (it.hasNext()) {
+            Contact c = it.next();
+            System.out.println("get contact - " + c);
+        }
+    }
+
+    /**
      *
      */
 
@@ -47,8 +109,12 @@ public class H2Tool {
      * @param <T>
      * @return
      */
-    public <T> T create(Class<? extends T> clazz) {
+    public <T> T getDAO(Class<? extends T> clazz) {
         return dbi.onDemand(clazz);
+    }
+
+    public DBI getDBI() {
+        return dbi;
     }
 
     /**
@@ -61,7 +127,6 @@ public class H2Tool {
     // h2内存数据库URL  -- "jdbc:h2:mem:phonebook;DB_CLOSE_DELAY=-1"
 
     /**
-     *
      * @param url - URL
      *            - "jdbc:h2:mem:phonebook;DB_CLOSE_DELAY=-1"  : 内存数据库
      *            - "jdbc:h2:file:~/test"                      : 文件数据库
@@ -77,11 +142,9 @@ public class H2Tool {
     }
 
     /**
-     *
      * @param dataSource
-     * @param classpathMigrationDir
-     *        目录中包含了一堆的V1_1_2__descripton_of_your_migration.sql
-     *        migration将安装版本号不断执行
+     * @param classpathMigrationDir 目录中包含了一堆的V1_1_2__descripton_of_your_migration.sql
+     *                              migration将安装版本号不断执行
      */
     private void migrate(DataSource dataSource, String classpathMigrationDir) {
         flyway = new Flyway();
@@ -91,13 +154,28 @@ public class H2Tool {
     }
 
     /**
+     * h2 db的备份与恢复脚本:
+     * <table>
+     *  <tr>
+     *     <td>备份</td>
+     *     <td>SCRIPT TO 'file.gz' COMPRESSION GZIP;</td>
+     *  </tr>
+     *  <tr>
+     *     <td>还原</td>
+     *     <td>SCRIPT FROM 'file.gz' COMPRESSION GZIP;</td>
+     *  </tr>
+     * </table>
+     * </p>
      *
-     * @param zipFilename  生成的备份文件的名称
-     * @param toWhere 备份保存位置
+     * @param zipPath 生成的备份文件的名称
      * @throws SQLException
      */
-    public void backup(String zipFilename, String toWhere) throws SQLException {
-        Backup.main("-file", zipFilename, "-dir", toWhere);
+    public void backup(String zipPath) throws SQLException {
+        Handle handle = dbi.open();
+        Update update = handle.createStatement(String.format("SCRIPT TO '%s' COMPRESSION GZIP", zipPath));
+        update.execute();
     }
+
+
 }
 
